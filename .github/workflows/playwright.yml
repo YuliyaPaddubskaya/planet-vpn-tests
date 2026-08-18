@@ -1,0 +1,102 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  test:
+    name: Run Playwright Tests
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Cache node_modules
+        uses: actions/cache@v5
+        id: node-cache
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.node-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Cache Playwright Browsers
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium --with-deps
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        continue-on-error: true
+
+      - name: Upload allure-results
+        uses: actions/upload-artifact@v6
+        with:
+          name: allure-results
+          path: allure-results/
+
+  generate-report:
+    name: Generate Allure Report
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Download allure-results
+        uses: actions/download-artifact@v7
+        with:
+          name: allure-results
+          path: allure-results
+
+      - name: Generate Report Files
+        run: |
+          npm install -g allure-commandline --save-dev
+          npx allure generate allure-results --clean -o allure-report
+
+      - name: Upload page artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: allure-report/
+
+  publish-report:
+    name: Publish to GitHub Pages
+    needs: generate-report
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

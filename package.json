@@ -1,0 +1,26 @@
+{
+  "name": "planet-vpn-tests",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "report:html": "playwright show-report",
+    "allure:generate": "allure generate allure-results --clean -o allure-report",
+    "allure:clear": "rm -rf allure-results allure-report",
+    "allure:open": "allure open allure-report",
+    "test:allure": "npm run test && npm run allure:generate && npm run allure:open"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0",
+    "allure-commandline": "^2.43.0",
+    "allure-playwright": "^3.10.2"
+  }
+}
